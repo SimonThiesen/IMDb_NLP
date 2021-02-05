@@ -1,0 +1,291 @@
+---
+title: "Preprocessing text for NLP"
+author: "Martin Petri Bagger"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Installing packages
+
+```{r}
+#install.packages("tm")
+#install.packages("tokenizers")
+#install.packages("stringr", dependencies = TRUE)
+#install.packages("XML")
+#install.packages("tidytext")
+#install.packages("dplyr")
+#install.packages("openNLP")
+#install.packages("rJava")
+```
+
+## Example text
+
+We will use the following text:
+
+    The first step in handling text is to break the stream of characters into words or, precisely, tokens. This is fundamental to further analysis. Without identifying the tokens, it is difficult to imagine extracting higher-level information from the document. Each token is an instance of a type, so the number of tokens is much higher than the number of types
+
+```{r}
+txt <- "The first step in handling text is to break the stream of characters into words or, 
+precisely, tokens. This is fundamental to further analysis. Without identifying the tokens, 
+it is difficult to imagine extracting higher-level information from the document. 
+Each token is an instance of a type, so the number of tokens is much higher than the number of types"
+```
+
+## Tokenization
+
+#### Using the packages: tokenizers
+
+```{r}
+library(tokenizers)
+
+# into characters
+tokenize_characters(txt, lowercase = F, strip_non_alphanum = F)
+```
+
+```{r}
+# into words (removing white space and delimiters)
+tokenize_words(txt, lowercase = F)
+```
+```{r}
+# with lower case conversion
+tokenize_words(txt, lowercase = T)
+```
+
+```{r}
+library(tidytext)
+#stop_words$word # list of stopwords from the tidytext package
+
+# with stopword removal
+tokenize_words(txt, lowercase = T, stopwords = stop_words$word)
+```
+
+```{r}
+# with stemming
+tokenize_word_stems(txt, stopwords = stop_words$word)
+
+```
+
+
+#### Using the packages: tm 
+
+```{r}
+library(tm)
+
+# removing delimiters
+txtTemp <- removePunctuation(txt)
+
+# removing whitespace
+txtTemp <- stripWhitespace(txtTemp)
+
+# lower case conversion
+txtTemp <- tolower(txtTemp)
+
+# stopword removal
+txtTemp <- removeWords(txtTemp, stopwords("english"))
+
+# stemming
+txtTemp <- stemDocument(txtTemp)
+
+# into tokens 
+txtTemp <- words(txtTemp)
+
+txtTemp
+```
+
+## Part-Of-Speech (POS) - tagging
+
+```{r}
+library(NLP)
+library(openNLP)
+#build a function to perform POS on a string
+tagPOS <-  function(x, ...) {
+  s <- as.String(x)
+  word_token_annotator <- Maxent_Word_Token_Annotator()
+  a2 <- Annotation(1L, "sentence", 1L, nchar(s))
+  a2 <- annotate(s, word_token_annotator, a2)
+  a3 <- annotate(s, Maxent_POS_Tag_Annotator(), a2)
+  a3w <- a3[a3$type == "word"]
+  POStags <- unlist(lapply(a3w$features, `[[`, "POS"))
+  POStagged <- paste(sprintf("%s/%s", s[a3w], POStags), collapse = " ")
+  list(POStagged = POStagged, POStags = POStags)
+}
+
+#POS
+POStxt <- tagPOS(txt)
+
+POStxt$POStagged
+
+```
+
+## Parsing text
+
+```{r}
+
+# install.packages(
+#  "http://datacube.wu.ac.at/src/contrib/openNLPmodels.en_1.5-1.tar.gz",
+#  repos=NULL,
+#  type="source"
+# )
+# install.packages("igraph")
+
+library(openNLPmodels.en)
+library(igraph)
+
+x <- "A sophisticated kind of text processing is called parsing." #text string for parsing
+s <- as.String(x)
+
+#set annotators
+sent_token_annotator <- Maxent_Sent_Token_Annotator()
+word_token_annotator <- Maxent_Word_Token_Annotator()
+parse_annotator <- Parse_Annotator()
+
+#perform actual parsing
+a2 <- annotate(s, list(sent_token_annotator, word_token_annotator))
+p <- parse_annotator(s, a2)
+parsedtext <- sapply(p$features, `[[`, "parse")
+parsedtext
+```
+
+##### displaying the parsed text in a tree structure 
+
+```{r}
+parse2graph <- function(ptext, leaf.color='chartreuse4', label.color='blue4', title=NULL, cex.main=.9, ...) {
+  stopifnot(require(NLP) && require(igraph))
+  
+  ## Replace words with unique versions
+  ms <- gregexpr("[^() ]+", ptext)                                      # just ignoring spaces and brackets?
+  words <- regmatches(ptext, ms)[[1]]                                   # just words
+  regmatches(ptext, ms) <- list(paste0(words, seq.int(length(words))))  # add id to words
+  
+  ## Going to construct an edgelist and pass that to igraph
+  ## allocate here since we know the size (number of nodes - 1) and -1 more to exclude 'TOP'
+  edgelist <- matrix('', nrow=length(words)-2, ncol=2)
+  
+  ## Function to fill in edgelist in place
+  edgemaker <- (function() {
+    i <- 0                                       # row counter
+    g <- function(node) {                        # the recursive function
+      if (inherits(node, "Tree")) {            # only recurse subtrees
+        if ((val <- node$value) != 'TOP1') { # skip 'TOP' node (added '1' above)
+          for (child in node$children) {
+            childval <- if(inherits(child, "Tree")) child$value else child
+            i <<- i+1
+            edgelist[i,1:2] <<- c(val, childval)
+          }
+        }
+        invisible(lapply(node$children, g))
+      }
+    }
+  })()
+  
+  ## Create the edgelist from the parse tree
+  edgemaker(Tree_parse(ptext))
+  
+  ## Make the graph, add options for coloring leaves separately
+  g <- graph_from_edgelist(edgelist)
+  vertex_attr(g, 'label.color') <- label.color  # non-leaf colors
+  vertex_attr(g, 'label.color', V(g)[!degree(g, mode='out')]) <- leaf.color
+  V(g)$label <- sub("\\d+", '', V(g)$name)      # remove the numbers for labels
+  plot(g, layout=layout.reingold.tilford, ...)
+  if (!missing(title)) title(title, cex.main=cex.main)
+}
+
+parse2graph(parsedtext,  # plus optional graphing parameters
+            title = sprintf("'%s'", x), margin=-0.1,
+            vertex.color=NA, vertex.frame.color='NA',
+            vertex.label.font=1, vertex.label.cex=1, asp=0.5,
+            edge.width=.5, edge.color='black', edge.arrow.size=0)
+```
+
+## Working on a corpus (small example)
+
+Here we will  transform a corpus (found in the file "anmeldelser.csv") into a document-term-matrix (dtm).
+The file contains a small number of restaurant reviews.
+
+```{r}
+read.csv("anmeldelser.csv")
+```
+
+
+```{r, echo=F}
+library("tibble")
+```
+
+```{r}
+anmeldelser <- as.data.frame(read.csv("anmeldelser.csv"))
+anmeldelser <- tibble(anmeldelseNum = seq(nrow(anmeldelser)), anmeldelse = as.character(anmeldelser$anmeldelse))
+```
+
+```{r}
+stopord <- read.csv("stopord.csv", sep = ',', stringsAsFactors=FALSE) #Danish stopwords
+
+anmeldelser$doc_id = seq(nrow(anmeldelser))
+names(anmeldelser)[2] <- "text"
+#anmeldelser$text <- as.character(anmeldelser$anmeldelse)
+anmeldelser
+
+```
+#### Transforming the tibble (dataframe) into a corpus to be used with the tm package
+
+```{r}
+corpus <- VCorpus(DataframeSource(anmeldelser))
+
+corpus
+```
+
+#### Getting Danish stopwords
+
+```{r}
+stopord <- read.csv("stopord.csv", sep = ',', stringsAsFactors=FALSE) #Danish stopwords
+stopordvec <- as.vector(stopord['word'])
+stopordvec$word
+```
+
+#### Going through the usual preprosessing steps
+
+````{r}
+#preprosessing the data
+corpus <- tm_map(corpus, content_transformer(tolower))
+corpus <- tm_map(corpus, removePunctuation) 
+corpus <- tm_map(corpus, removeNumbers)
+corpus <- tm_map(corpus, stripWhitespace)
+corpus <- tm_map(corpus, removeWords, c(stopordvec$word))
+```
+
+#### Generating a document Term Matrix
+
+```{r}
+#document-term-matrix with frequencies
+dtm <- DocumentTermMatrix(corpus)
+inspect(dtm)
+```
+
+#### document term matrix with tf-idf weighting of tokens
+
+```{r}
+#tf-idf document-term-matrix
+dtm <- DocumentTermMatrix(corpus, 
+                          control = list(weighting = weightTfIdf)
+                          )
+inspect(dtm)
+```
+
+#### we can do a lot of things to our data, e.g. remove sparse terms (remember to consider the effect on your analysis.)  
+
+```{r}
+dtmDense <- removeSparseTerms(dtm, 0.67)
+
+inspect(dtmDense)
+```
+
+#### it is also possibleto get a list of all terms in the document term matrix (the corpus)
+```{r}
+termList <- dtm$dimnames$Terms
+```
+
+
