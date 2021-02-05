@@ -1,15 +1,13 @@
-# IMDB Movie Reviews Sentiment Analysis
+### Project Summary:
+This paper presents a novel application of sentiment analysis of user reviews on the well-recognized movie platform IMDb. The purpose of this study is to utilize state of the art NLP to classify sentiment of movie reviews.
+
+To conduct such an analysis, 24,500 movie related reviews were scraped off the IMDb platform. In order to get the most current and relevant data foundation, the reviews are only related to movies released in the time period from April 2019 to April 2020.  
+
+Based on the data foundation the study precedes to dive deeper into traditional data mining approaches and how highly unstructured data can be processed, analysed, improved and evaluated. Through the analysis, the best performing model given the context, was concluded to be the logistic regression yielding an accuracy of 80.8%  and thereby outperforming lexicons and other common approaches. The improvement strategies implemented resulted in a 7.5%-point increased performance, compared to the baseline model. 
+
 
 ### Authors:
-Viriyakovithya Ekapope | Chauhan Siddhant | Ponce James | Piracha Ali
-
-### Project Summary:
-We created a shiny app to do sentiment classification (Positive / Negative) on IMDB movie review dataset. Classification is done through a ML model (trained with 8 special features engineered from movie reviews) that performs with an AUC of 91% (10 pts improvement vs. base model).
-
-For more detail, please refer to the [report](https://github.com/ekapopev/IMDb_Sentiment_Analysis/blob/master/Project%20Report.pdf).
+Simon Lyngsø, Nicolai Rosling, Simon Stausholm & Simon Thiesen
 
 
-Apart from the classification task the shiny app also provides visualizations that generate insights into the test reviews data.
-
-You can try by uploading your own dataset directly in ShinyApp. Sample csv input can be found [here](https://github.com/ekapopev/IMDb_Sentiment_Analysis/blob/master/IMDb_Sentiment_Analysis/Data/test.csv).
-The ShinyApp is published via this [link](https://ekapopev.shinyapps.io/IMDb_Sentiment_Analysis/).
+For more detail, please refer to the report (https://github.com/SimonThiesen/Applied-Data-Science/blob/main/Applied%20Data%20Science%20280520.pdf)
