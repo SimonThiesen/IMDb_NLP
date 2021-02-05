@@ -7,11 +7,7 @@
 # 1. Scrape IMDb movie id from main imdb website
 # - In this script date range is from 2017-12-31 to 2019-01-01, 100 movies per page
 # - Store in 'all_movies.csv' file
-# 
-# 2. Scrape reviews for each movie
-# - For each movie id, run over the list and scrape top 25 reviews for each movie.
-# - Store in 'all_reviews.csv' file
-# 
+#NEW
 ###############################################################################
 
 if (!require("rvest")) install.packages("rvest", quiet=TRUE) ; require("rvest")
