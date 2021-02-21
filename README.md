@@ -12,7 +12,7 @@ The project consisted overall of 3 parts
 
 The study precedes to dive deeper into web scraping, traditional data mining approaches and how highly unstructured data can be processed, analysed, improved and evaluated. 
 
-Full report: [IMDb - Sentiment analysis](IMDb20%report.pdf)
+Full report: [IMDb - Sentiment analysis](IMDb%20report.pdf)
 
 ### Data 
 Web scraped 24,500 movie related reviews from IMDb. 
